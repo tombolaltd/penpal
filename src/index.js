@@ -193,9 +193,10 @@ const connectCallSender = (
       return new Penpal.Promise((resolve, reject) => {
         const id = generateId();
         const handleMessageEvent = event => {
+          const localOriginCheck = event.origin === "null" && remoteOrigin === "*";
           if (
             event.source === remote &&
-            event.origin === remoteOrigin &&
+            (event.origin === remoteOrigin || localOriginCheck) &&
             event.data.penpal === REPLY &&
             event.data.id === id
           ) {
@@ -255,9 +256,10 @@ const connectCallReceiver = (info, methods, destructionPromise) => {
   log(`${localName}: Connecting call receiver`);
 
   const handleMessageEvent = event => {
+    const localOriginCheck = event.origin === "null" && remoteOrigin === "*";
     if (
       event.source === remote &&
-      event.origin === remoteOrigin &&
+      (event.origin === remoteOrigin || localOriginCheck) &&
       event.data.penpal === CALL
     ) {
       const { methodName, args, id } = event.data;
@@ -565,11 +567,16 @@ Penpal.connectToParent = ({
 
         child.removeEventListener(MESSAGE, handleMessageEvent);
 
+        // If event.origin is "null", the remote protocol is file:
+        // and we must post messages with "*" as targetOrigin [1]
+        // [1] https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage#Utiliser_window.postMessage_dans_les_extensions
+        const remoteOrigin = event.origin === "null" ? "*" : event.origin;
+
         const info = {
           localName: 'Child',
           local: child,
           remote: parent,
-          remoteOrigin: event.origin
+          remoteOrigin
         };
 
         const callSender = {};
