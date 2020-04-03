@@ -1,37 +1,37 @@
-interface IConnectionObject {
+export interface IConnectionObject {
     promise: Promise<any>;
     destroy: () => {};
 }
 
-interface IChildConnectionObject extends IConnectionObject {
+export interface IChildConnectionObject extends IConnectionObject {
     iframe: HTMLElement;
 }
 
-type ConnectionMethods<T> = {
+export type ConnectionMethods<T> = {
     [P in keyof T]: () => Promise<any>;
 };
 
-type ERR_CONNECTION_DESTROYED = 'ConnectionDestroyed';
-type ERR_CONNECTION_TIMEOUT = 'ConnectionTimeout';
-type ERR_NOT_IN_IFRAME = 'NotInIframe';
-type ERR_IFRAME_ALREADY_ATTACHED_TO_DOM = 'IframeAlreadyAttachedToDom';
+export type ERR_CONNECTION_DESTROYED = 'ConnectionDestroyed';
+export type ERR_CONNECTION_TIMEOUT = 'ConnectionTimeout';
+export type ERR_NOT_IN_IFRAME = 'NotInIframe';
+export type ERR_IFRAME_ALREADY_ATTACHED_TO_DOM = 'IframeAlreadyAttachedToDom';
 
-interface IConnectionOptions {
+export interface IConnectionOptions {
     methods?: ConnectionMethods<{}>;
     timeout?: number;
 }
 
-interface IChildConnectionOptions extends IConnectionOptions {
+export interface IChildConnectionOptions extends IConnectionOptions {
     url: string;
     appendTo?: HTMLElement;
     iframe?: HTMLIFrameElement;
 }
 
-interface IParentConnectionOptions extends IConnectionOptions {
+export interface IParentConnectionOptions extends IConnectionOptions {
     parentOrigin?: string;
 }
 
-interface PenpalStatic {
+export interface PenpalStatic {
     connectToChild(options: IChildConnectionOptions): IChildConnectionObject;
     connectToParent(options?: IParentConnectionOptions): IConnectionObject;
     Promise: typeof Promise;
