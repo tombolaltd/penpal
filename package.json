@@ -5,11 +5,11 @@
   "author": "Aaron Hardy <aaron@aaronhardy.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/Aaronius/penpal/issues"
+    "url": "https://github.com/tombolaltd/penpal/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Aaronius/penpal.git"
+    "url": "git+https://github.com/tombolaltd/penpal.git"
   },
   "keywords": [
     "iframe",
