@@ -123,8 +123,8 @@ var getOriginFromUrl = function getOriginFromUrl(url) {
   // [1] https://html.spec.whatwg.org/multipage/origin.html#origin
 
 
-  if (protocol === "file:") {
-    return "null";
+  if (protocol === 'file:') {
+    return '*';
   } // If the port is the default for the protocol, we don't want to add it to the origin string
   // or it won't match the message's event.origin.
 
@@ -234,9 +234,9 @@ var connectCallSender = function connectCallSender(callSender, info, methodNames
         var id = generateId();
 
         var handleMessageEvent = function handleMessageEvent(event) {
-          var localOriginCheck = event.origin === "null" && remoteOrigin === "*";
+          var isExpectedLocalOrigin = remoteOrigin === '*' && event.origin === 'null';
 
-          if (event.source === remote && (event.origin === remoteOrigin || localOriginCheck) && event.data.penpal === REPLY && event.data.id === id) {
+          if (event.source === remote && (event.origin === remoteOrigin || isExpectedLocalOrigin) && event.data.penpal === REPLY && event.data.id === id) {
             log("".concat(localName, ": Received ").concat(methodName, "() reply"));
             local.removeEventListener(MESSAGE, handleMessageEvent);
             var returnValue = event.data.returnValue;
@@ -289,9 +289,9 @@ var connectCallReceiver = function connectCallReceiver(info, methods, destructio
   log("".concat(localName, ": Connecting call receiver"));
 
   var handleMessageEvent = function handleMessageEvent(event) {
-    var localOriginCheck = event.origin === "null" && remoteOrigin === "*";
+    var isExpectedLocalOrigin = remoteOrigin === '*' && event.origin === 'null';
 
-    if (event.source === remote && (event.origin === remoteOrigin || localOriginCheck) && event.data.penpal === CALL) {
+    if (event.source === remote && (event.origin === remoteOrigin || isExpectedLocalOrigin) && event.data.penpal === CALL) {
       var _event$data = event.data,
           methodName = _event$data.methodName,
           args = _event$data.args,
@@ -422,14 +422,17 @@ Penpal.connectToChild = function (_ref2) {
     var destroyCallReceiver;
 
     var handleMessage = function handleMessage(event) {
-      var child = iframe.contentWindow;
+      var child = iframe.contentWindow; // if remoteOrigin we are expecting is '*' then we are using file:
+      // if the event.origin is also null or file:// then it's as expected
 
-      if (event.source === child && event.origin === childOrigin && event.data.penpal === HANDSHAKE) {
-        log('Parent: Received handshake, sending reply'); // If event.origin is "null", the remote protocol is file:
-        // and we must post messages with "*" as targetOrigin [1]
-        // [1] https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage#Utiliser_window.postMessage_dans_les_extensions
+      var isExpectedLocalOrigin = childOrigin === '*' && (event.origin === 'null' || event.origin === 'file://');
 
-        var remoteOrigin = event.origin === "null" ? "*" : event.origin;
+      if (event.source === child && (event.origin === childOrigin || isExpectedLocalOrigin) && event.data.penpal === HANDSHAKE) {
+        log('Parent: Received handshake, sending reply'); // We have determined that the source and origin are correct.
+        // Therefore if the event.origin is null then we must use '*'
+        // otherwise we can proceed as normal
+
+        var remoteOrigin = event.origin === 'null' ? childOrigin : event.origin;
         event.source.postMessage({
           penpal: HANDSHAKE_REPLY,
           methodNames: Object.keys(methods)
@@ -554,10 +557,10 @@ Penpal.connectToParent = function () {
       if ((parentOrigin === '*' || parentOrigin === event.origin) && event.source === parent && event.data.penpal === HANDSHAKE_REPLY) {
         log('Child: Received handshake reply');
         child.removeEventListener(MESSAGE, handleMessageEvent); // If event.origin is "null", the remote protocol is file:
-        // and we must post messages with "*" as targetOrigin [1]
-        // [1] https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage#Utiliser_window.postMessage_dans_les_extensions
+        // Since source matched we presume we are using WKWebview.
+        // Therefore we must send post messages with origin: '*'
 
-        var remoteOrigin = event.origin === "null" ? "*" : event.origin;
+        var remoteOrigin = event.origin === 'null' ? '*' : event.origin;
         var info = {
           localName: 'Child',
           local: child,

@@ -93,8 +93,8 @@ const getOriginFromUrl = url => {
   // The origin of a document with file protocol is an opaque origin
   // and its serialization "null" [1]
   // [1] https://html.spec.whatwg.org/multipage/origin.html#origin
-  if (protocol === "file:") {
-    return "null";
+  if (protocol === 'file:') {
+    return '*';
   }
 
   // If the port is the default for the protocol, we don't want to add it to the origin string
@@ -193,10 +193,10 @@ const connectCallSender = (
       return new Penpal.Promise((resolve, reject) => {
         const id = generateId();
         const handleMessageEvent = event => {
-          const localOriginCheck = event.origin === "null" && remoteOrigin === "*";
+          const isExpectedLocalOrigin = remoteOrigin === '*' && event.origin === 'null';
           if (
             event.source === remote &&
-            (event.origin === remoteOrigin || localOriginCheck) &&
+            (event.origin === remoteOrigin || isExpectedLocalOrigin) &&
             event.data.penpal === REPLY &&
             event.data.id === id
           ) {
@@ -256,10 +256,10 @@ const connectCallReceiver = (info, methods, destructionPromise) => {
   log(`${localName}: Connecting call receiver`);
 
   const handleMessageEvent = event => {
-    const localOriginCheck = event.origin === "null" && remoteOrigin === "*";
+    const isExpectedLocalOrigin = remoteOrigin === '*' && event.origin === 'null';
     if (
       event.source === remote &&
-      (event.origin === remoteOrigin || localOriginCheck) &&
+      (event.origin === remoteOrigin || isExpectedLocalOrigin) &&
       event.data.penpal === CALL
     ) {
       const { methodName, args, id } = event.data;
@@ -399,17 +399,21 @@ Penpal.connectToChild = ({ url, appendTo, iframe, methods = {}, timeout }) => {
 
     const handleMessage = event => {
       const child = iframe.contentWindow;
+
+      // if remoteOrigin we are expecting is '*' then we are using file:
+      // if the event.origin is also null or file:// then it's as expected
+      const isExpectedLocalOrigin = childOrigin === '*' && (event.origin === 'null' || event.origin === 'file://');
       if (
         event.source === child &&
-        event.origin === childOrigin &&
+        (event.origin === childOrigin || isExpectedLocalOrigin) &&
         event.data.penpal === HANDSHAKE
       ) {
         log('Parent: Received handshake, sending reply');
 
-        // If event.origin is "null", the remote protocol is file:
-        // and we must post messages with "*" as targetOrigin [1]
-        // [1] https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage#Utiliser_window.postMessage_dans_les_extensions
-        const remoteOrigin = event.origin === "null" ? "*" : event.origin;
+        // We have determined that the source and origin are correct.
+        // Therefore if the event.origin is null then we must use '*'
+        // otherwise we can proceed as normal
+        const remoteOrigin = event.origin === 'null' ? childOrigin : event.origin;
 
         event.source.postMessage(
           {
@@ -568,9 +572,9 @@ Penpal.connectToParent = ({
         child.removeEventListener(MESSAGE, handleMessageEvent);
 
         // If event.origin is "null", the remote protocol is file:
-        // and we must post messages with "*" as targetOrigin [1]
-        // [1] https://developer.mozilla.org/fr/docs/Web/API/Window/postMessage#Utiliser_window.postMessage_dans_les_extensions
-        const remoteOrigin = event.origin === "null" ? "*" : event.origin;
+        // Since source matched we presume we are using WKWebview.
+        // Therefore we must send post messages with origin: '*'
+        const remoteOrigin = event.origin === 'null' ? '*' : event.origin;
 
         const info = {
           localName: 'Child',
